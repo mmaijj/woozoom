@@ -1,0 +1,114 @@
+@import "~common/stylus/variable"
+html, body
+  height: 100%
+  overflow: hidden
+
+@media screen and (max-width: 321px) {
+  body {
+    font-size:16px
+  }
+}
+
+@media screen and (min-width: 321px) and (max-width:400px) {
+  body {
+    font-size:17px
+  }
+}
+
+@media screen and (min-width: 400px) {
+  body {
+    font-size:19px
+  }
+}
+.ml12
+  margin-left 12px
+.w60
+  width 60%
+.mt-top
+  margin-top 10px
+//.cube-popup
+//  top 8rem
+.cube-tab-panels-group
+  height 100%
+.cube-picker-confirm
+  color $color-bottom-active
+/* 修改btn按钮的样式 */
+.cube-btn_disabled
+  background linear-gradient(129deg,rgba(67,136,255,1) 0%,rgba(33,115,214,1) 100%)
+  opacity 0.3
+.cube-btn-primary
+  border-radius 22px
+  background linear-gradient(129deg,rgba(67,136,255,1) 0%,rgba(33,115,214,1) 100%)
+.cube-btn_disabled::after
+  border none
+.cube-btn-primary:active
+  background-color $color-bottom-active
+/* 按照效果图修改dialog样式 */
+.cube-dialog-main
+  width 6.6rem
+  height 4rem
+  .cube-dialog-title
+    height 1.4rem
+    line-height 1.4rem
+    font-size 20px
+    color $color-font-black
+    .cube-dialog-title-def
+      margin 0
+      margin-left .5rem
+      text-align left
+  .cube-dialog-content
+    margin 0
+    height 1.4rem
+    display flex
+    align-items center
+    justify-content center
+    margin-top 12px
+  .cube-dialog-btn_highlight
+    color $color-bottom-active
+  .cube-input_active::after
+    border-color $color-bottom-active
+#eppo-appro
+  .cube-input-field
+    text-align right
+#addUav
+  .cube-input::after
+    border none
+  .cube-input-field
+    font-size 15px
+    color $color-font-disabled
+    padding-left .3rem
+    padding-top .3rem
+#addAccount,#bind-uav
+  .cube-input::after
+    border none
+  .cube-input-field
+    font-size 15px
+    color $color-font-disabled
+    padding-left .3rem
+    padding-top .3rem
+#person-info
+  .cube-upload
+    width 60px
+    .cube-upload-btn-def
+    //height 60px
+    //width 60px
+      box-shadow: none
+    .cube-upload-file
+      margin: 0
+      + .cube-upload-btn
+        margin-left: -80px
+        opacity: 0
+        z-index: 99;
+  .cube-upload-def .cube-upload-btn, .cube-upload-def .cube-upload-file
+    margin 0
+  .cube-upload-file-def > .cubeic-wrong::before
+    display none
+  .cube-upload-btn-def
+    height 60px
+    width 60px
+  .cube-upload-btn
+    z-index 100
+    opacity 0
+  .cube-upload-file-def
+    height 60px
+    width 60px

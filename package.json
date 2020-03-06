@@ -1,0 +1,48 @@
+{
+  "name": "wz-agri-account",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint",
+    "report": "vue-cli-service build --report"
+  },
+  "dependencies": {
+    "axios": "^0.19.1",
+    "clipboard": "^2.0.4",
+    "core-js": "^2.6.11",
+    "cube-ui": "^1.12.34",
+    "echarts": "^4.6.0",
+    "eruda": "^1.10.3",
+    "es-abstract": "^1.17.2",
+    "esri-loader": "^2.13.0",
+    "exif-js": "^2.3.0",
+    "qrcodejs2": "0.0.2",
+    "vue": "^2.6.11",
+    "vue-echarts": "^4.1.0",
+    "vue-router": "^3.1.5",
+    "vuex": "^3.1.2",
+    "weixin-js-sdk": "^1.4.0-test"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.12.1",
+    "@vue/cli-plugin-eslint": "^3.12.1",
+    "@vue/cli-service": "^3.12.1",
+    "@vue/eslint-config-standard": "^4.0.0",
+    "babel-eslint": "^10.0.1",
+    "cross-env": "^6.0.3",
+    "eslint": "^5.16.0",
+    "eslint-plugin-vue": "^5.0.0",
+    "stylus": "^0.54.5",
+    "stylus-loader": "^3.0.2",
+    "vue-cli-plugin-cube-ui": "^0.2.5",
+    "vue-template-compiler": "^2.6.11"
+  },
+  "transformModules": {
+    "cube-ui": {
+      "transform": "cube-ui/src/modules/${member}",
+      "kebabCase": true
+    }
+  }
+}
