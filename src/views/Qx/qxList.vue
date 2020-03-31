@@ -4,7 +4,7 @@
         <div :class="[item.validDate >= nowDate?'qx_header':'qx_header_sx']">
           <p class="qxcode">{{item.accountId}}</p>
           <span class="qxtime">有效期至：<p>{{item.validDate}}</p></span>
-          <span class="ybd">剩余绑定次数<p>{{item.bindCount}}</p>次</span>
+          <span class="ybd">本年剩余绑定次数<p>{{item.bindCount}}</p>次</span>
         </div>
         <div class="qx_footer" v-if="item.validDate >= nowDate">
           <div class="bindUav" v-if="item.deviceId === '' || item.deviceId === '0'" @click="goBind(item)">
@@ -21,6 +21,7 @@
           </div>
         </div>
       </div>
+      <div class="backIndex" @click="goBack">返回首页</div>
       <span class="addUav" @click="addAccount">
       </span>
     </div>
@@ -250,6 +251,10 @@ export default {
           }).show()
         }
       }
+    },
+    /* 返回首页 */
+    goBack () {
+      this.$router.push('/index')
     }
   }
 }
@@ -291,7 +296,7 @@ export default {
           position absolute
           bottom 0
           right 0
-          width 2.4rem
+          width 2.7rem
           height .48rem
           line-height .48rem
           background linear-gradient(134deg,rgba(5,153,246,1) 0%,rgba(4,91,222,1) 100%)
@@ -381,4 +386,18 @@ export default {
       bottom .4rem
       right .3rem
       z-index 99
+    .backIndex
+      height 36px
+      line-height 36px
+      width 72px
+      color #ffffff
+      background-color #000000
+      opacity 0.7
+      position fixed
+      top 1.2rem
+      right 0
+      border-radius 6px 0 0 6px
+      z-index 99
+      font-size 14px
+      text-align center
 </style>

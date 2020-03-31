@@ -15,7 +15,7 @@
         <div class="uavTitle">
           <img :src="uavIcon">
           <label>{{uavName}}</label>
-          <p>{{userName}}</p>
+<!--          <p>{{userName}}</p>-->
         </div>
         <div class="uavBottom">
           <img src="../../common/img/sandtable/V@3x.png">
@@ -27,9 +27,9 @@
         </div>
       </div>
       <div class="flyerDetail" id="flyerDetail" v-show="isShowFly">
-        <p>{{flyerName}}</p>
+        <p style="width: 22%;overflow-wrap: break-word">{{flyerName}}</p>
         <div class="rightLine"></div>
-        <p>{{flyerPhone}}</p>
+        <p style="width: 20%;overflow-wrap: break-word">{{flyerPhone}}</p>
         <div class="flyBottom">
           <img :src="flyerPosition">
           <p class="position">N{{flyLon}}, E{{flyLat}}</p>
@@ -96,7 +96,10 @@ export default {
       flyLon: '',
       flyLat: '',
       nowId: '',
+      oldId: '',
       graphicList: [],
+      firstShowPer: '0', // 是否第一次显示人员
+      firstShowUav: '0', // 是否第一次显示飞机
       activeId: '', // 当前选中的图标id
       onlineSymbol: {}, // 在线飞机实例
       outlineSymbol: {}, // 离线飞机实例
@@ -223,7 +226,7 @@ export default {
       loadModules(
         ['esri/Map', 'esri/views/MapView', 'esri/layers/WebTileLayer', 'esri/widgets/Zoom'],
         this.options
-      ).then(([Map, MapView, WebTileLayer, Zoom, SpatialReference, Extent]) => {
+      ).then(([Map, MapView, WebTileLayer]) => {
         const titleLayer = new WebTileLayer({
           urlTemplate: 'https://mt.google.cn/vt/lyrs=y@126&hl=zh-CN&gl=CN&src=app&x={col}&y={row}&z={level}&s==Galil'
         })
@@ -462,6 +465,8 @@ export default {
         let ss = this.uavGraphics.concat(this.polylineGraphics)
         this.graphicsList = ss.concat(this.flyerGraphics)
         this.view.graphics.addMany(this.graphicsList)
+        // this.activeId = ''
+        // this.chooseUavPosition = []
       })
       if (this.intervalMap !== undefined) {
         return
@@ -492,6 +497,7 @@ export default {
               self.showNum = false
               self.uavIndex = ''
               self.numIndex = ''
+              self.chooseUavPosition = []
               if (clickType === 'player') {
                 self.screenHeight = 'allScreenP'
                 self.setPlayerDetailMap(clickId)
@@ -514,6 +520,8 @@ export default {
     },
     /* 查看无人机 */
     goUav (item, index) {
+      this.activeId = ''
+      this.chooseUavPosition = []
       let id = item.id
       this.setExt = '1' // 当选中其中一个时候，地图放大
       this.uavIndex = index
@@ -542,9 +550,11 @@ export default {
       let trans = this.gcj_encrypt(latPosition, lonPosition)
       let realX = trans.lat
       let realY = trans.lon
-      this.view.center = [realY, realX]
-      this.view.extent = null
-      this.view.zoom = '19'
+      if (this.nowId !== item) {
+        this.view.center = [realY, realX]
+        this.view.extent = null
+        this.view.zoom = '19'
+      }
       this.nowId = item
       // 页面加载完成后获取高度信息
       this.$nextTick(function () {
@@ -584,9 +594,11 @@ export default {
       let trans = this.gcj_encrypt(latPosition, lonPosition)
       let realX = trans.lat
       let realY = trans.lon
-      this.view.center = [realY, realX]
-      this.view.extent = null
-      this.view.zoom = '19'
+      if (this.nowId !== item) {
+        this.view.center = [realY, realX]
+        this.view.extent = null
+        this.view.zoom = '19'
+      }
       this.nowId = item
       // 页面加载完成后获取高度信息
       this.$nextTick(function () {
@@ -640,16 +652,18 @@ export default {
         // eslint-disable-next-line no-return-assign
         return item1.id === item
       })
-      this.nowId = item
       this.setExt = '1' // 当选中其中一个时候，地图放大
       let latPosition = this.playerDetail.lat
       let lonPosition = this.playerDetail.lon
       let trans = this.gcj_encrypt(latPosition, lonPosition)
       let realX = trans.lat
       let realY = trans.lon
-      this.view.center = [realY, realX]
-      this.view.extent = null
-      this.view.zoom = '19'
+      if (this.nowId !== item) {
+        this.view.center = [realY, realX]
+        this.view.extent = null
+        this.view.zoom = '19'
+      }
+      this.nowId = item
       // 页面加载完成后获取高度信息
       this.$nextTick(function () {
         let clientH = document.documentElement.clientHeight
@@ -684,15 +698,17 @@ export default {
         return item1.id === item
       })
       this.setExt = '1' // 当选中其中一个时候，地图放大
-      this.nowId = item
       let latPosition = this.playerDetail.lat
       let lonPosition = this.playerDetail.lon
       let trans = this.gcj_encrypt(latPosition, lonPosition)
       let realX = trans.lat
       let realY = trans.lon
-      this.view.center = [realY, realX]
-      this.view.extent = null
-      this.view.zoom = '19'
+      if (this.nowId !== item) {
+        this.view.center = [realY, realX]
+        this.view.extent = null
+        this.view.zoom = '19'
+      }
+      this.nowId = item
       // 页面加载完成后获取高度信息
       this.$nextTick(function () {
         let clientH = document.documentElement.clientHeight
@@ -733,6 +749,7 @@ export default {
       this.setExt = '0'
       this.activeId = ''
       this.chooseUavPosition = []
+      this.nowId = ''
       this.screenHeight = 'allScreen'
       clearInterval(this.intervalMapN)
       this.intervalMapN = null // 设置为null
@@ -764,6 +781,7 @@ export default {
       this.activeId = ''
       this.chooseUavPosition = []
       this.screenHeight = 'allScreen'
+      this.nowId = ''
       clearInterval(this.intervalMapN)
       this.intervalMapN = null // 设置为null
       clearInterval(this.intervalMapM)
@@ -784,6 +802,7 @@ export default {
       this.isShowUav = true
       this.setExt = '0'
       this.activeId = ''
+      this.nowId = ''
       this.chooseUavPosition = []
       this.screenHeight = 'allScreen'
       clearInterval(this.intervalMapN)
@@ -946,7 +965,7 @@ export default {
         margin-left .3rem
       .rightLine
         height .28rem
-        width .02rem
+        width 2px
         background-color #DCDCDC
         margin-left .2rem
         margin-right .2rem

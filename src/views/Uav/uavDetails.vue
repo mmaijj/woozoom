@@ -27,7 +27,7 @@
       </div>
     </div>
     <div class="uav_con">
-      <div>
+      <div style="display: none;">
         <label>无人机类型</label>
         <span>{{planType}}</span>
       </div>

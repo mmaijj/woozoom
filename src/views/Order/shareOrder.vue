@@ -38,6 +38,7 @@ export default {
       orderName: '',
       userName: '',
       orderId: '',
+      userId: '',
       createTime: ''
     }
   },
@@ -48,6 +49,7 @@ export default {
     this.userName = orderDetail.userName
     this.orderId = orderDetail.orderId
     this.createTime = orderDetail.createTime
+    this.userId = localStorage.getItem('userId')
     this.$nextTick(function () {
       this.qrcode()
     })
@@ -57,7 +59,7 @@ export default {
   methods: {
     //  生成二维码
     qrcode () {
-      let aa = '2' + ',' + this.orderId
+      let aa = '2' + ',' + this.orderId + ',' + this.userId
       let qrcode = new QRCode('qrcode', {
         width: 160,
         height: 160, // 高度

@@ -114,21 +114,7 @@ export default {
         })
       }
     })
-    /* 注册扫一扫功能 */
-    // this.request.get('/wx/patient/getJsSdkSign?url=' + _url).then(function (res) {
-    //   // 注入配置
-    //   let _lists = res.data
-    //   wx.config({
-    //     debug: false,
-    //     appId: _lists.appId,
-    //     timestamp: _lists.timestamp,
-    //     nonceStr: _lists.nonceStr,
-    //     signature: _lists.signature,
-    //     jsApiList: [
-    //       'scanQRCode'
-    //     ]
-    //   })
-    // })
+    // this.goCreateEppo()
   },
   methods: {
     /* 解决ios上jssdk配置签名问题 */
@@ -174,6 +160,16 @@ export default {
             icon: 'cubeic-alert',
             onConfirm: () => {
               this.$router.push('/EppoIndex')
+            }
+          }).show()
+        } else if (code === 5003 || code === 5000) {
+          this.$createDialog({
+            type: 'alert',
+            content: '系统异常，请重新登录',
+            icon: 'cubeic-alert',
+            onConfirm: () => {
+              localStorage.removeItem('userToken')
+              this.$router.push({ path: '/UserLogin', query: { 'flag': '1' } })
             }
           }).show()
         }
@@ -233,10 +229,9 @@ export default {
                     content: '加入成功',
                     icon: 'cubeic-alert',
                     onConfirm: () => {
-                      _self.$router.push('/index')
+                      _self.$router.push('/EppoMain')
                     }
                   }).show()
-                  _self.$forceUpdate()
                 } else {
                   _self.$createDialog({
                     type: 'alert',
@@ -246,42 +241,53 @@ export default {
                 }
               })
             } else if (flag === '2') {
-              let userQx = localStorage.getItem('userQx') // 用户权限
-              if (userQx === '1') {
-                let teamId = localStorage.getItem('teamId')
-                let searchParams = new URLSearchParams()
-                searchParams.set('orderId', id)
-                searchParams.set('receiveTeamId', teamId)
-                _self.request({
-                  url: '/crops-platform/api/order_v3/shareOrder',
-                  method: 'get',
-                  params: searchParams,
-                  headers: {
-                    'clientType': 'weixin',
-                    'deviceId': '11654325'
-                  }
-                }).then(response => {
-                  let res = response.data.status
-                  // eslint-disable-next-line no-unused-vars
-                  let { code, reasonPhrase } = res
-                  if (code === 0) {
-                    _self.$createDialog({
-                      type: 'alert',
-                      content: '加入成功',
-                      icon: 'cubeic-alert'
-                    }).show()
-                  } else {
-                    _self.$createDialog({
-                      type: 'alert',
-                      content: reasonPhrase,
-                      icon: 'cubeic-alert'
-                    }).show()
-                  }
-                })
+              let userid = ss[2]
+              let userId = localStorage.getItem('userId')
+              console.log('用户id' + userid)
+              if (userid !== userId) {
+                let userQx = localStorage.getItem('userQx') // 用户权限
+                if (userQx === '1') {
+                  let teamId = localStorage.getItem('teamId')
+                  let searchParams = new URLSearchParams()
+                  searchParams.set('orderId', id)
+                  searchParams.set('receiveTeamId', teamId)
+                  _self.request({
+                    url: '/crops-platform/api/order_v3/shareOrder',
+                    method: 'get',
+                    params: searchParams,
+                    headers: {
+                      'clientType': 'weixin',
+                      'deviceId': '11654325'
+                    }
+                  }).then(response => {
+                    let res = response.data.status
+                    // eslint-disable-next-line no-unused-vars
+                    let { code, reasonPhrase } = res
+                    if (code === 0) {
+                      _self.$createDialog({
+                        type: 'alert',
+                        content: '加入成功',
+                        icon: 'cubeic-alert'
+                      }).show()
+                    } else {
+                      _self.$createDialog({
+                        type: 'alert',
+                        content: reasonPhrase,
+                        icon: 'cubeic-alert'
+                      }).show()
+                    }
+                  })
+                } else {
+                  _self.$createDialog({
+                    type: 'alert',
+                    content: '只有植保队长能够加入订单',
+                    icon: 'cubeic-alert'
+                  }).show()
+                }
               } else {
                 _self.$createDialog({
                   type: 'alert',
-                  content: '只有植保队长能够加入订单',
+                  content: '此订单已经属于您所属的植保队,不需要再扫码了',
                   icon: 'cubeic-alert'
                 }).show()
               }
@@ -297,8 +303,17 @@ export default {
     },
     /* 跳转到订单页面 */
     gotoOrder () {
-      localStorage.setItem('tabPage', 'manager')
-      this.$router.push('/OrderList')
+      let flag = localStorage.getItem('userQx')
+      if (flag !== '0') {
+        localStorage.setItem('tabPage', 'manager')
+        this.$router.push('/OrderList')
+      } else {
+        this.$createDialog({
+          type: 'alert',
+          content: '没有植保队无法查看订单',
+          icon: 'cubeic-alert'
+        }).show()
+      }
     },
     /* 跳转到沙盘 */
     gotoSand () {

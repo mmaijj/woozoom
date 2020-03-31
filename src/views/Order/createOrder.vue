@@ -30,7 +30,7 @@ export default {
   data () {
     return {
       account: '', // 订单名称
-      setAccount: '订单名称',
+      setAccount: '“例：王富裕3986松山镇象牙山村”',
       setArea: '地区信息', // 地区信息
       area: '' // 所在省市区
     }
@@ -41,37 +41,45 @@ export default {
     /* 创建订单 */
     createOrder () {
       if (this.account !== '') {
-        let addParams = new URLSearchParams()
-        addParams.set('name', this.account)
-        this.request({
-          url: '/crops-platform/api/order_v3/createOrder',
-          method: 'get',
-          params: addParams,
-          headers: {
-            'clientType': 'weixin',
-            'deviceId': '11654325'
-          }
-        }).then(response => {
-          let res = response.data.status
-          // eslint-disable-next-line no-unused-vars
-          let { code, reasonPhrase } = res
-          if (code === 0) {
-            this.$createDialog({
-              type: 'alert',
-              content: '添加成功',
-              icon: 'cubeic-alert',
-              onConfirm: () => {
-                this.$router.push('OrderList')
-              }
-            }).show()
-          } else {
-            this.$createDialog({
-              type: 'alert',
-              content: reasonPhrase,
-              icon: 'cubeic-alert'
-            }).show()
-          }
-        })
+        if (this.account.length > 15) {
+          this.$createDialog({
+            type: 'alert',
+            content: '订单名称不得超过15位',
+            icon: 'cubeic-alert'
+          }).show()
+        } else {
+          let addParams = new URLSearchParams()
+          addParams.set('name', this.account)
+          this.request({
+            url: '/crops-platform/api/order_v3/createOrder',
+            method: 'get',
+            params: addParams,
+            headers: {
+              'clientType': 'weixin',
+              'deviceId': '11654325'
+            }
+          }).then(response => {
+            let res = response.data.status
+            // eslint-disable-next-line no-unused-vars
+            let { code, reasonPhrase } = res
+            if (code === 0) {
+              this.$createDialog({
+                type: 'alert',
+                content: '添加成功',
+                icon: 'cubeic-alert',
+                onConfirm: () => {
+                  this.$router.push('OrderList')
+                }
+              }).show()
+            } else {
+              this.$createDialog({
+                type: 'alert',
+                content: reasonPhrase,
+                icon: 'cubeic-alert'
+              }).show()
+            }
+          })
+        }
       } else {
         this.$createDialog({
           type: 'alert',

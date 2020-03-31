@@ -3,10 +3,10 @@
     <div id="viewDiv">
     </div>
     <div class="viewList" id="taskList">
-      <div class="hideDetail">
+      <div class="hideDetail" @click="showScreen">
         <span></span>
       </div>
-      <div class="orderDetail">
+      <div class="orderDetail" v-show="!isShowAll">
         <div class="detailTitle">
           <div class="orderTitle">
             {{taskName}}
@@ -14,7 +14,7 @@
           <div class="createTime">
             <img src="../../common/img/manger/planPlayer@3x.png">
             <div>
-              <p>{{userName}}</p>创建于<p>{{createTime}}</p>
+              <p>{{userName}}</p>更新于<p>{{createTime}}</p>
             </div>
           </div>
         </div>
@@ -40,7 +40,7 @@
             <p>{{workPosition}}</p>
           </div>
           <div>
-            <label>作业时间</label>
+            <label>创建时间</label>
             <p>{{workTime}}</p>
           </div>
           <div>
@@ -50,6 +50,14 @@
           <div>
             <label>作业团队</label>
             <p>{{workTeamName}}</p>
+          </div>
+          <div>
+            <label>作物</label>
+            <p>{{cropsDetail}}</p>
+          </div>
+          <div>
+            <label>药物</label>
+            <p>{{drugDetail}}</p>
           </div>
         </div>
         <div class="landDetail" @click="goLandDetail">
@@ -70,11 +78,12 @@
 
 <script>
 import transForm from 'common/mixins/transform'
+import countDown from 'common/mixins/common'
 import { loadModules } from 'esri-loader'
 
 export default {
   name: 'taskDetail',
-  mixins: [transForm],
+  mixins: [transForm, countDown],
   data () {
     return {
       mapTitle: '',
@@ -89,6 +98,8 @@ export default {
       workTime: '', // 作业时间
       workNumDetail: '', // 作业人员信息
       workTeamName: '', // 作业团队
+      cropsDetail: '', // 作物
+      drugDetail: '', // 药物
       flyerList: [], // 作业人员集合
       createTime: '', // 创建时间
       taskId: '', // 任务ID
@@ -101,17 +112,25 @@ export default {
       obstaclesList: [], // 障碍物集合
       circleList: [], // 圆形障碍物
       polygonList: [], // 多边形障碍物
+      stopSprayList: [], // 停喷区
+      infoPointList: [], // 辅助点
       landLons: [], // 地块坐标
       landPosition: [], // 地块转化坐标
+      stopSprayPosition: [], // 停喷区坐标转化
+      infoPointPosition: [], // 辅助点坐标转化
       polygonPosition: [], // 多边形障碍物转化坐标
       setExt: '0', // 是否设置了地图显示范围 0:没有 1:有
       landGraphics: [], // 地块实例list
+      stopSprayGraphics: [], // 停喷区实例list
+      infoPointGraphics: [], // 辅助点实例list
       zaGraphics: [], // 圆形障碍实例list
       polygonGraphics: [], // 多边形障碍物实例
       lineSymbol: {}, // 在线飞机实例
       flightNum: '', // 飞行架次
       lineSymbol1: {}, // 在线飞机实例
       onLine: navigator.onLine, // 当前网络状况
+      isShowAll: false, // 是否展示全屏
+      ridgeWidth: '', // 垄宽
       landLats: [] // 地块坐标
     }
   },
@@ -122,13 +141,11 @@ export default {
   mounted () {
     window.addEventListener('online', this.updateOnlineStatus)
     window.addEventListener('offline', this.updateOnlineStatus)
-    let clientH = document.documentElement.clientHeight
+    let clientH = localStorage.getItem('clientH')
     let orderH = document.getElementById('taskList').clientHeight
     let viewH = (clientH - orderH).toString()
     document.getElementById('viewDiv').style.height = viewH + 'px'
-    this.set2DMap()
     this.getTaskDetail()
-    this.queryFlightList()
   },
   methods: {
     /* 网络状况 */
@@ -166,21 +183,47 @@ export default {
         })
         this.lineSymbol = {
           type: 'simple-fill', // autocasts as SimpleLineSymbol()
-          color: [67, 136, 255, 0.5],
+          color: [0, 0, 0, 0.3],
           outline: {
             // autocasts as new SimpleLineSymbol()
-            color: [255, 255, 255],
+            color: '#FFFFFF',
+            width: 1
+          }
+        }
+        this.lineSymbolN = {
+          type: 'simple-fill', // autocasts as SimpleLineSymbol()
+          color: [0, 216, 25, 0.3],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: '#00D819',
             width: 1
           }
         }
         this.lineSymbol1 = {
           type: 'simple-fill', // autocasts as new SimpleFillSymbol()
-          color: [51, 51, 204, 0.9],
+          color: [255, 27, 32, 0.3],
           style: 'solid',
           outline: { // autocasts as new SimpleLineSymbol()
-            color: 'white',
+            color: '#FF1B26',
             width: 1
-
+          }
+        }
+        this.stopSymbol = {
+          type: 'simple-fill', // autocasts as new SimpleFillSymbol()
+          color: [255, 212, 40, 0.3],
+          style: 'solid',
+          outline: { // autocasts as new SimpleLineSymbol()
+            color: '#FFD428',
+            width: 1
+          }
+        }
+        this.infoSymbol = {
+          type: 'simple-marker', // autocasts as new SimpleMarkerSymbol()
+          color: [103, 0, 255],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: [255, 255, 255],
+            width: 2
           }
         }
         // var aa = this.positions
@@ -198,9 +241,9 @@ export default {
       if (task !== '') {
         this.taskName = task.taskName
         this.userName = task.createUserName
-        this.createTime = task.createDate
+        // this.createTime = task.updateDate
         this.tid = task.id
-        this.taskId = task.taskId
+        // this.taskId = task.taskId
         this.queryTaskDetail()
       }
     },
@@ -224,7 +267,13 @@ export default {
           let result = response.data.data
           this.landArea = result.taskDtail.land.area
           this.workPosition = result.taskDtail.land.position
-          this.workTime = result.taskDtail.createDate
+          this.taskId = result.taskDtail.taskId
+          this.workTime = this.formatDate(Number(result.taskDtail.taskId))
+          this.createTime = result.taskDtail.updateDate
+          this.cropsDetail = result.taskDtail.cropsId
+          this.drugDetail = result.taskDtail.pesticideId
+          this.ridgeWidth = result.taskDtail.ridgeWidth
+          localStorage.setItem('ridgeWidth', this.ridgeWidth)
           if (result.taskDtail.percent !== undefined && result.taskDtail.percent !== '0') {
             if (result.taskDtail.percent.indexOf('.') !== -1) {
               this.compDegree = result.taskDtail.percent.substring(0, result.taskDtail.percent.indexOf('.'))
@@ -234,7 +283,6 @@ export default {
           } else {
             this.compDegree = 0
           }
-          console.log(this.compDegree)
           this.blockId = result.taskDtail.land.blockId
           // this.tid = result.taskDetail.id
           if (result.flyerList !== undefined) {
@@ -250,9 +298,7 @@ export default {
           if (result.taskDtail.office !== undefined) {
             this.workTeamName = result.taskDtail.office.name
           }
-          // this.workNumDetail = result.taskDtail.userName
-          // let ss = this.workNumDetail.split(',')
-          // this.workNum = ss.length
+          this.queryFlightList()
         } else if (code === 5003 || code === 5000) {
           this.$createDialog({
             type: 'alert',
@@ -272,13 +318,27 @@ export default {
         }
       })
     },
+    /* 扩大屏幕 */
+    showScreen () {
+      if (this.isShowAll) {
+        this.isShowAll = false
+      } else {
+        this.isShowAll = true
+      }
+      this.$nextTick(() => {
+        let clientH = localStorage.getItem('clientH')
+        let orderH = document.getElementById('taskList').clientHeight
+        let viewH = (clientH - orderH).toString()
+        document.getElementById('viewDiv').style.height = viewH + 'px'
+      })
+    },
     /* 查看地块详情 */
     goLandDetail () {
-      this.$router.push({ path: '/landDetail', query: { 'blockId': this.blockId } })
+      this.$router.push({ path: '/landDetail', query: { 'blockId': this.blockId, 'flightNum': this.flightNum } })
     },
     /* 查看飞行架次列表 */
     lookFlightsList () {
-      this.$router.push({ path: '/flightList', query: { 'taskId': this.taskId, 'tid': this.tid } })
+      this.$router.push({ path: '/flightList', query: { 'taskId': this.taskId, 'tid': this.tid, 'flightNum': this.flightNum } })
     },
     /* 飞行详情 */
     queryFlyDetail () {
@@ -321,6 +381,22 @@ export default {
             }
           } else {
             this.obstaclesList = []
+          }
+          if (result.stopSprayPoint !== undefined) {
+            this.stopSprayList = JSON.parse(result.stopSprayPoint)
+            if (this.stopSprayList === undefined) {
+              this.stopSprayList = []
+            }
+          } else {
+            this.stopSprayList = []
+          }
+          if (result.infoPoint !== undefined) {
+            this.infoPointList = JSON.parse(result.infoPoint)
+            if (this.infoPointList === undefined) {
+              this.infoPointList = []
+            }
+          } else {
+            this.infoPointList = []
           }
           this.setSymbols()
         } else {
@@ -386,6 +462,7 @@ export default {
             // this.setExt = '1'
           }
           /* 根据返回的地块坐标绘制地块 */
+          this.landPosition = []
           for (let i = 0; i < this.landList.length; i++) {
             let latPosition = this.landList[i].lat
             let lonPosition = this.landList[i].lon
@@ -398,14 +475,63 @@ export default {
             type: 'polygon', // autocasts as new Polyline()
             rings: this.landPosition
           }
+          let symbol = null
+          if (this.flightNum > 0) {
+            symbol = this.lineSymbolN
+          } else {
+            symbol = this.lineSymbol
+          }
           this.pointGraphic = new Graphic({
             geometry: polygon,
-            symbol: this.lineSymbol
+            symbol: symbol
           })
           this.landGraphics[0] = this.pointGraphic
         } else {
           this.view.center = ['123.4556544666', '41.7983268598'] // 没有飞机时候默认地图中心点为沈阳故宫
           this.view.zoom = 19
+        }
+        /* 根据返回坐标点绘制停喷区 */
+        if (this.stopSprayList.length > 0) {
+          for (let i = 0; i < this.stopSprayList.length; i++) {
+            this.stopSprayPosition = []
+            for (let j = 0; j < this.stopSprayList[i].length; j++) {
+              let latPosition = this.stopSprayList[i][j].mLatitude
+              let lonPosition = this.stopSprayList[i][j].mLongitude
+              let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+              let realX = trans.lat
+              let realY = trans.lon
+              this.stopSprayPosition[j] = [realY, realX]
+            }
+            let stopPolygon = {
+              type: 'polygon', // autocasts as new Polyline()
+              rings: this.stopSprayPosition
+            }
+            let stopSprayGraphic = new Graphic({
+              geometry: stopPolygon,
+              symbol: this.stopSymbol
+            })
+            this.stopSprayGraphics[i] = stopSprayGraphic
+          }
+        }
+        /* 绘制辅助点 */
+        if (this.infoPointList.length > 0) {
+          for (let i = 0; i < this.infoPointList.length; i++) {
+            let latPosition = this.infoPointList[i].mLatitude
+            let lonPosition = this.infoPointList[i].mLongitude
+            let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+            let realX = trans.lat
+            let realY = trans.lon
+            let point = {
+              type: 'point',
+              longitude: realY,
+              latitude: realX
+            }
+            let infoPointGraphic = new Graphic({
+              geometry: point,
+              symbol: this.infoSymbol
+            })
+            this.infoPointGraphics[i] = infoPointGraphic
+          }
         }
         /* 绘制圆形障碍物 */
         if (this.circleList.length > 0) {
@@ -433,6 +559,7 @@ export default {
         /* 绘制多边形障碍物 */
         if (this.polygonList.length > 0) {
           for (let j = 0; j < this.polygonList.length; j++) {
+            this.polygonPosition = []
             for (let k = 0; k < this.polygonList[j].length; k++) {
               let latPosition = this.polygonList[j][k].lat
               let lonPosition = this.polygonList[j][k].lon
@@ -454,6 +581,8 @@ export default {
         }
         this.graphicsList = this.landGraphics.concat(this.zaGraphics)
         this.graphicsList = this.graphicsList.concat(this.polygonGraphics)
+        this.graphicsList = this.graphicsList.concat(this.stopSprayGraphics)
+        this.graphicsList = this.graphicsList.concat(this.infoPointGraphics)
         this.view.graphics.addMany(this.graphicsList)
       })
     },
@@ -482,6 +611,7 @@ export default {
             this.flightNum = 0
             this.flightList = []
           }
+          this.set2DMap()
         }
       })
     },
@@ -581,7 +711,7 @@ export default {
         .workDetail
           background-color $color-background-white
           div
-            height 1rem
+            height .7rem
             display flex
             align-items center
             padding 0 .3rem

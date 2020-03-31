@@ -24,13 +24,13 @@
                 <p>{{landCount}}</p>
                 <span>地块数量</span>
               </div>
+<!--              <div class="ml3">-->
+<!--                <p>{{orderArea}}</p>-->
+<!--                <span>订单面积（亩）</span>-->
+<!--              </div>-->
               <div class="ml3">
                 <p>{{orderArea}}</p>
-                <span>订单面积（亩）</span>
-              </div>
-              <div class="ml3">
-                <p>{{allDrug}}</p>
-                <span>总用药量</span>
+                <span>测量面积</span>
               </div>
             </div>
             <div class="detailList">
@@ -42,10 +42,10 @@
                 <p>{{flyerCount}}</p>
                 <span>作业飞手</span>
               </div>
-<!--              <div class="ml3">-->
-<!--                <p>{{allDrug}}</p>-->
-<!--                <span>总用药量</span>-->
-<!--              </div>-->
+              <div class="ml3">
+                <p>{{zyArea}}</p>
+                <span>作业面积</span>
+              </div>
             </div>
           </div>
           <div class="assocatedTask" @click="showTask()">
@@ -56,6 +56,7 @@
           </div>
         </div>
     </div>
+    <div class="backIndex" @click="goBack">返回首页</div>
   </div>
 </template>
 
@@ -83,6 +84,8 @@ export default {
       orderArea: 0, // 总面积
       chArea: 0, // 测绘面积
       allDrug: 0, // 总用药量
+      clArea: 0, // 测量面积
+      zyArea: 0, // 作业面积
       taskList: [],
       orderName: '', // 订单名称
       userName: '', // 用户姓名
@@ -90,15 +93,21 @@ export default {
       orderId: '', // 订单ID
       dealTask: [], // 已关联的任务
       landList: [], // 地块坐标集合
+      stopSprayList: [], // 停喷区
+      infoPointList: [], // 辅助点
       obstaclesList: [], // 障碍物集合
       circleList: [], // 圆形障碍物
       polygonList: [], // 多边形障碍物
       landLons: [], // 地块坐标
       landPosition: [], // 地块转化坐标
       polygonPosition: [], // 多边形障碍物转化坐标
+      stopSprayPosition: [], // 停喷区坐标转化
+      infoPointPosition: [], // 辅助点坐标转化
       setExt: '0', // 是否设置了地图显示范围 0:没有 1:有
       landGraphics: [], // 地块实例list
       zaGraphics: [], // 圆形障碍实例list
+      stopSprayGraphics: [], // 停喷区实例list
+      infoPointGraphics: [], // 辅助点实例list
       polygonGraphics: [], // 多边形障碍物实例
       lineSymbol: {}, // 在线飞机实例
       flightNum: '', // 飞行架次
@@ -130,7 +139,7 @@ export default {
   mounted () {
     window.addEventListener('online', this.updateOnlineStatus)
     window.addEventListener('offline', this.updateOnlineStatus)
-    let clientH = document.documentElement.clientHeight
+    let clientH = localStorage.getItem('clientH')
     let orderH = document.getElementById('orderList').clientHeight
     let viewH = (clientH - orderH).toString()
     document.getElementById('viewDiv').style.height = viewH + 'px'
@@ -174,21 +183,47 @@ export default {
         })
         this.lineSymbol = {
           type: 'simple-fill', // autocasts as SimpleLineSymbol()
-          color: [67, 136, 255, 0.5],
+          color: [0, 0, 0, 0.3],
           outline: {
             // autocasts as new SimpleLineSymbol()
-            color: [255, 255, 255],
+            color: '#FFFFFF',
+            width: 1
+          }
+        }
+        this.lineSymbolN = {
+          type: 'simple-fill', // autocasts as SimpleLineSymbol()
+          color: [0, 216, 25, 0.3],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: '#00D819',
             width: 1
           }
         }
         this.lineSymbol1 = {
           type: 'simple-fill', // autocasts as new SimpleFillSymbol()
-          color: [51, 51, 204, 0.9],
+          color: [255, 27, 32, 0.3],
           style: 'solid',
           outline: { // autocasts as new SimpleLineSymbol()
-            color: 'white',
+            color: '#FF1B26',
             width: 1
-
+          }
+        }
+        this.stopSymbol = {
+          type: 'simple-fill', // autocasts as new SimpleFillSymbol()
+          color: [255, 212, 40, 0.3],
+          style: 'solid',
+          outline: { // autocasts as new SimpleLineSymbol()
+            color: '#FFD428',
+            width: 1
+          }
+        }
+        this.infoSymbol = {
+          type: 'simple-marker', // autocasts as new SimpleMarkerSymbol()
+          color: [103, 0, 255],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: [255, 255, 255],
+            width: 2
           }
         }
         // var aa = this.positions
@@ -254,6 +289,22 @@ export default {
             }
           } else {
             this.obstaclesList = []
+          }
+          if (result.stopSprayPoint !== undefined) {
+            this.stopSprayList = JSON.parse(result.stopSprayPoint)
+            if (this.stopSprayList === undefined) {
+              this.stopSprayList = []
+            }
+          } else {
+            this.stopSprayList = []
+          }
+          if (result.infoPoint !== undefined) {
+            this.infoPointList = JSON.parse(result.infoPoint)
+            if (this.infoPointList === undefined) {
+              this.infoPointList = []
+            }
+          } else {
+            this.infoPointList = []
           }
           this.setSymbols()
         } else {
@@ -363,27 +414,7 @@ export default {
             })
             this.view.extent = this.ext
             this.setExt = '1'
-          } else {
-            // this.setExt = '1'
           }
-          /* 根据返回的地块坐标绘制地块 */
-          for (let i = 0; i < this.landList.length; i++) {
-            let latPosition = this.landList[i].lat
-            let lonPosition = this.landList[i].lon
-            let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
-            let realX = trans.lat
-            let realY = trans.lon
-            this.landPosition[i] = [realY, realX]
-          }
-          let polygon = {
-            type: 'polygon', // autocasts as new Polyline()
-            rings: this.landPosition
-          }
-          this.pointGraphic = new Graphic({
-            geometry: polygon,
-            symbol: this.lineSymbol
-          })
-          this.landGraphics[0] = this.pointGraphic
         }
       })
     },
@@ -394,54 +425,8 @@ export default {
         ['esri/Graphic', 'esri/geometry/SpatialReference', 'esri/geometry/Extent', 'esri/geometry/Point', 'esri/geometry/Circle', 'esri/geometry/support/webMercatorUtils'],
         this.options
       ).then(([Graphic, SpatialReference, Extent, Point, Circle, webMercatorUtils]) => {
-        // if (this.allLand.length !== 0) {
-        //   this.view.extent = null
-        //   /* 根据返回的地块坐标点，规划地图显示范围 */
-        //   let maxX = ''
-        //   // 遍历数组，默认arr中的某一个元素为最大值，进行逐一比较
-        //   for (let i = 0; i < this.landLons.length; i++) {
-        //     // 外层循环一次，就拿arr[i] 和 内层循环arr.legend次的 arr[j] 做对比
-        //     for (let j = i; j < this.landLons.length; j++) {
-        //       if (this.landLons[i] < this.landLons[j]) {
-        //         // 如果arr[j]大就把此时的值赋值给最大值变量max
-        //         maxX = this.landLons[j]
-        //         this.landLons[j] = this.landLons[i]
-        //         this.landLons[i] = maxX
-        //       }
-        //     }
-        //   }
-        //   let maxY = ''
-        //   // 遍历数组，默认arr中的某一个元素为最大值，进行逐一比较
-        //   for (let i = 0; i < this.landLats.length; i++) {
-        //     // 外层循环一次，就拿arr[i] 和 内层循环arr.legend次的 arr[j] 做对比
-        //     for (let j = i; j < this.landLats.length; j++) {
-        //       if (this.landLats[i] < this.landLats[j]) {
-        //         // 如果arr[j]大就把此时的值赋值给最大值变量max
-        //         maxY = this.landLats[j]
-        //         this.landLats[j] = this.landLats[i]
-        //         this.landLats[i] = maxY
-        //       }
-        //     }
-        //   }
-        //   if (this.setExt === '0') {
-        //     /* 取x,y轴最大最小值 */
-        //     let xmin = this.landLons[this.landLons.length - 1] - 0.0005
-        //     let xMax = this.landLons[0] + 0.0005
-        //     let yMin = this.landLats[this.landLats.length - 1] - 0.0005
-        //     let yMax = this.landLats[0] + 0.0005
-        //     this.ext = new Extent({
-        //       xmin: xmin,
-        //       ymin: yMin,
-        //       xmax: xMax,
-        //       ymax: yMax,
-        //       spatialReference: new SpatialReference({ wkid: 4326 })
-        //     })
-        //     this.view.extent = this.ext
-        //     this.setExt = '1'
-        //   } else {
-        //     // this.setExt = '1'
-        //   }
         /* 根据返回的地块坐标绘制地块 */
+        this.landPosition = []
         for (let i = 0; i < this.landList.length; i++) {
           let latPosition = this.landList[i].lat
           let lonPosition = this.landList[i].lon
@@ -454,11 +439,60 @@ export default {
           type: 'polygon', // autocasts as new Polyline()
           rings: this.landPosition
         }
+        let symbol = null
+        if (this.flyerCount > 0) {
+          symbol = this.lineSymbolN
+        } else {
+          symbol = this.lineSymbol
+        }
         this.pointGraphic = new Graphic({
           geometry: polygon,
-          symbol: this.lineSymbol
+          symbol: symbol
         })
         this.landGraphics[0] = this.pointGraphic
+        /* 根据返回坐标点绘制停喷区 */
+        if (this.stopSprayList.length > 0) {
+          for (let i = 0; i < this.stopSprayList.length; i++) {
+            this.stopSprayPosition = []
+            for (let j = 0; j < this.stopSprayList[i].length; j++) {
+              let latPosition = this.stopSprayList[i][j].mLatitude
+              let lonPosition = this.stopSprayList[i][j].mLongitude
+              let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+              let realX = trans.lat
+              let realY = trans.lon
+              this.stopSprayPosition[j] = [realY, realX]
+            }
+            let stopPolygon = {
+              type: 'polygon', // autocasts as new Polyline()
+              rings: this.stopSprayPosition
+            }
+            let stopSprayGraphic = new Graphic({
+              geometry: stopPolygon,
+              symbol: this.stopSymbol
+            })
+            this.stopSprayGraphics[i] = stopSprayGraphic
+          }
+        }
+        /* 绘制辅助点 */
+        if (this.infoPointList.length > 0) {
+          for (let i = 0; i < this.infoPointList.length; i++) {
+            let latPosition = this.infoPointList[i].mLatitude
+            let lonPosition = this.infoPointList[i].mLongitude
+            let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+            let realX = trans.lat
+            let realY = trans.lon
+            let point = {
+              type: 'point',
+              longitude: realY,
+              latitude: realX
+            }
+            let infoPointGraphic = new Graphic({
+              geometry: point,
+              symbol: this.infoSymbol
+            })
+            this.infoPointGraphics[i] = infoPointGraphic
+          }
+        }
         /* 绘制圆形障碍物 */
         if (this.circleList.length > 0) {
           for (let i = 0; i < this.circleList.length; i++) {
@@ -481,10 +515,12 @@ export default {
               symbol: this.lineSymbol1
             })
           }
+          this.circleList = []
         }
         /* 绘制多边形障碍物 */
         if (this.polygonList.length > 0) {
           for (let j = 0; j < this.polygonList.length; j++) {
+            this.polygonPosition = []
             for (let k = 0; k < this.polygonList[j].length; k++) {
               let latPosition = this.polygonList[j][k].lat
               let lonPosition = this.polygonList[j][k].lon
@@ -503,9 +539,12 @@ export default {
             })
             this.polygonGraphics[j] = pointGraphic
           }
+          this.polygonList = []
         }
         this.graphicsList = this.landGraphics.concat(this.zaGraphics)
         this.graphicsList = this.graphicsList.concat(this.polygonGraphics)
+        this.graphicsList = this.graphicsList.concat(this.stopSprayGraphics)
+        this.graphicsList = this.graphicsList.concat(this.infoPointGraphics)
         this.view.graphics.addMany(this.graphicsList)
       })
     },
@@ -533,6 +572,9 @@ export default {
           if (result.acre !== undefined) {
             this.orderArea = result.acre
           }
+          if (result.taskAcre !== undefined) {
+            this.zyArea = result.taskAcre
+          }
           this.teamCount = result.teamCount
           this.uavCount = result.uavCount
         } else if (code === 5003 || code === 5000) {
@@ -556,11 +598,7 @@ export default {
     },
     /* 跳转到任务 */
     showTask () {
-      if (this.taskCount > 0) {
-        this.$router.push({ path: '/OrderDealTask', query: { orderId: this.orderId } })
-      } else {
-        this.$router.push({ path: '/OrderAddTask', query: { orderId: this.orderId } })
-      }
+      this.$router.push({ path: '/OrderDealTask', query: { orderId: this.orderId, flyerCount: this.flyerCount } })
     },
     /* 查询此订单已关联的任务 */
     searchDealTask () {
@@ -593,8 +631,14 @@ export default {
             this.dealTask = []
           }
         }
-        this.set2DMap()
+        this.$nextTick(() => {
+          this.set2DMap()
+        })
       })
+    },
+    /* 返回首页 */
+    goBack () {
+      this.$router.push('/index')
     },
     /* 通过中心点和半径计算出圆形的边点集合 */
     getCirclePoints (center, radius) {
@@ -708,4 +752,18 @@ export default {
             background-size contain
             position absolute
             right .3rem
+    .backIndex
+      height 36px
+      line-height 36px
+      width 72px
+      color #ffffff
+      background-color #000000
+      opacity 0.7
+      position fixed
+      top 1.2rem
+      right 0
+      border-radius 6px 0 0 6px
+      z-index 99
+      font-size 14px
+      text-align center
 </style>

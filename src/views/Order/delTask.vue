@@ -184,7 +184,9 @@ export default {
             this.taskList.push.apply(this.taskList, result.list)
             if (this.taskList.length > 0) {
               for (let i = 0; i < this.taskList.length; i++) {
-                this.taskList[i].check = false
+                if (this.taskList[i].check !== true) {
+                  this.taskList[i].check = false
+                }
                 if (this.taskList[i].percent !== undefined && this.taskList[i].percent !== '0') {
                   if (this.taskList[i].percent.indexOf('.') !== -1) {
                     this.taskList[i].percent = this.taskList[i].percent.substring(0, this.taskList[i].percent.indexOf('.'))
@@ -244,38 +246,45 @@ export default {
           }
         }
         if (this.canDeal) {
-          let addParams = new URLSearchParams()
-          addParams.set('orderId', this.orderId)
-          addParams.set('tIds', chooseTask.toString())
-          this.request({
-            url: '/crops-platform/api/order_v3/delOrderTask',
-            method: 'post',
-            params: addParams,
-            headers: {
-              'clientType': 'weixin',
-              'deviceId': '11654325'
-            }
-          }).then(response => {
-            let res = response.data.status
-            // eslint-disable-next-line no-unused-vars
-            let { code, reasonPhrase } = res
-            if (code === 0) {
-              this.$createDialog({
-                type: 'alert',
-                content: '删除成功',
-                icon: 'cubeic-alert',
-                onConfirm: () => {
-                  this.$router.push('/OrderDetail')
+          this.$createDialog({
+            type: 'confirm',
+            content: '是否移除选中任务',
+            icon: 'cubeic-alert',
+            onConfirm: () => {
+              let addParams = new URLSearchParams()
+              addParams.set('orderId', this.orderId)
+              addParams.set('tIds', chooseTask.toString())
+              this.request({
+                url: '/crops-platform/api/order_v3/delOrderTask',
+                method: 'post',
+                params: addParams,
+                headers: {
+                  'clientType': 'weixin',
+                  'deviceId': '11654325'
                 }
-              }).show()
-            } else {
-              this.$createDialog({
-                type: 'alert',
-                content: reasonPhrase,
-                icon: 'cubeic-alert'
-              }).show()
+              }).then(response => {
+                let res = response.data.status
+                // eslint-disable-next-line no-unused-vars
+                let { code, reasonPhrase } = res
+                if (code === 0) {
+                  this.$createDialog({
+                    type: 'alert',
+                    content: '删除成功',
+                    icon: 'cubeic-alert',
+                    onConfirm: () => {
+                      this.$router.push('/OrderDetail')
+                    }
+                  }).show()
+                } else {
+                  this.$createDialog({
+                    type: 'alert',
+                    content: reasonPhrase,
+                    icon: 'cubeic-alert'
+                  }).show()
+                }
+              })
             }
-          })
+          }).show()
         } else {
           this.$createDialog({
             type: 'alert',

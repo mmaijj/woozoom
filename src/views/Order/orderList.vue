@@ -3,6 +3,7 @@
       <div class="search-header">
         <div :class="userQx === '1' ? 'searchText':'searchTextN'">
           <cube-input
+          ref="orderInput"
           :placeholder="searchText"
           v-model="orderName"
           @input="searchByName"
@@ -32,7 +33,9 @@
                 <p>{{item.user.name}}</p>创建于<p>{{item.createDate}}</p>
               </div>
             </div>
-            <div class="moreCz" @click.stop="showMore(index)" v-if="userQx === '1'"></div>
+            <div class="moreBtn">
+              <div class="moreCz" @click.stop="showMore(index)" v-if="userQx === '1'"></div>
+            </div>
             <div :class="item.otherSty ==='1' ? 'moreTextN':'moreText'" :id="index + 1" v-show="activeIndex === index">
               <ul>
                 <li @click.stop="shareOrder(item)">分享订单</li>
@@ -43,6 +46,7 @@
           </div>
         </cube-scroll>
       </div>
+      <div class="backIndex" @click="goBack">返回首页</div>
       <span class="addOrder" @click="addOrder" v-if="userQx === '1'">
       </span>
     </div>
@@ -128,6 +132,7 @@ export default {
         this.isMeFlag = 1
         this.searchOrder()
       } else {
+        this.pageNo = 1
         this.myCreate = 'myCreate'
         this.isMeFlag = 0
         this.searchOrder()
@@ -171,7 +176,6 @@ export default {
               this.orderList[i].otherSty = '0'
             }
           }
-          console.log(this.orderList)
         } else if (code === 5003 || code === 5000) {
           this.$createDialog({
             type: 'alert',
@@ -192,6 +196,7 @@ export default {
       })
     },
     showMore (index) {
+      this.$refs.orderInput.blur()
       if (this.activeIndex !== '') {
         this.activeIndex = ''
       } else {
@@ -221,6 +226,7 @@ export default {
     },
     /* 查看订单详情 */
     goOrderDetail (item) {
+      this.$refs.orderInput.blur()
       let orderData = item
       localStorage.setItem('createId', item.user.id)
       sessionStorage.setItem('orderContent', JSON.stringify(orderData))
@@ -228,6 +234,7 @@ export default {
     },
     /* 修改订单名称 */
     changeName (item) {
+      this.$refs.orderInput.blur()
       let createId = item.user.id
       if (this.userId !== createId) {
         this.$createDialog({
@@ -359,6 +366,10 @@ export default {
           }
         }).show()
       }
+    },
+    /* 返回首页 */
+    goBack () {
+      this.$router.push('/index')
     }
   }
 }
@@ -371,6 +382,8 @@ export default {
     width 100%
     background-color $color-background-grey
     overflow-y auto
+    /*.cube-input-field*/
+    /*  color red*/
     .search-header
       height 1rem
       margin 0 .3rem
@@ -432,14 +445,19 @@ export default {
             font-size 12px
             color $color-font-grey
             margin-left .12
+        .moreBtn
+          height 60px
+          width 80px
+          position absolute
+          right .3rem
+          display flex
+          align-items center
+          justify-content center
         .moreCz
           height 20px
           width 20px
           background url("../../common/img/eppoteam/moreIcon@3x.png") center center no-repeat
           background-size contain
-          position absolute
-          right .3rem
-          top .7rem
     .addOrder
       height 48px
       width 48px
@@ -449,6 +467,20 @@ export default {
       bottom .4rem
       right .3rem
       z-index 99
+    .backIndex
+      height 36px
+      line-height 36px
+      width 72px
+      color #ffffff
+      background-color #000000
+      opacity 0.7
+      position fixed
+      top 1.2rem
+      right 0
+      border-radius 6px 0 0 6px
+      z-index 99
+      font-size 14px
+      text-align center
     .moreText
       position absolute
       top 1.2rem

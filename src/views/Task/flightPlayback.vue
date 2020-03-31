@@ -31,19 +31,28 @@ export default {
       obstaclesList: [], // 障碍物集合
       circleList: [], // 圆形障碍物
       polygonList: [], // 多边形障碍物
+      stopSprayList: [], // 停喷区
+      infoPointList: [], // 辅助点
       landLons: [], // 地块坐标
       landLats: [], // 地块坐标
       landPosition: [], // 地块转化坐标
       flightPosition: [], // 飞行回放转换坐标
       polygonPosition: [], // 多边形障碍物转化坐标
+      stopSprayPosition: [], // 停喷区坐标转化
+      infoPointPosition: [], // 辅助点坐标转化
       landGraphics: [], // 地块实例list
       zaGraphics: [], // 圆形障碍实例list
       polylineGraphics: [], // 飞行轨迹list
+      stopSprayGraphics: [], // 停喷区实例list
+      infoPointGraphics: [], // 辅助点实例list
       polygonGraphics: [], // 多边形障碍物实例
       lineSymbol1: {}, // 在线飞机实例
       flyPosition: 0,
-      timeInterval: 2000, // 绘制飞行轨迹时间间隔（ms）
-      totalTimeIn: 2000,
+      timeInterval: 1000, // 绘制飞行轨迹时间间隔（ms）
+      totalTimeIn: 1000,
+      taakGraList: [],
+      takeGraphic: null,
+      turnGraphic: null,
       recordId: '', // 架次id
       speedNum: 1, // 播放速度
       flyDuration: '', // 飞行时长
@@ -61,7 +70,7 @@ export default {
   },
   /* 清空定时器 */
   beforeDestroy () {
-    clearInterval(this.timeIntervalMap)
+    clearInterval(this.intervalMap)
     this.intervalMap = null // 设置为null
     clearInterval(this.timeIntervalMap)
     this.timeIntervalMap = null // 设置为null
@@ -116,27 +125,67 @@ export default {
         })
         this.lineSymbol = {
           type: 'simple-fill', // autocasts as SimpleLineSymbol()
-          color: [67, 136, 255, 0.5],
+          color: [0, 0, 0, 0.3],
           outline: {
             // autocasts as new SimpleLineSymbol()
-            color: [255, 255, 255],
+            color: '#FFFFFF',
+            width: 1
+          }
+        }
+        this.lineSymbolN = {
+          type: 'simple-fill', // autocasts as SimpleLineSymbol()
+          color: [0, 216, 25, 0.3],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: '#00D819',
             width: 1
           }
         }
         this.lineSymbol1 = {
           type: 'simple-fill', // autocasts as new SimpleFillSymbol()
-          color: [51, 51, 204, 0.9],
+          color: [255, 27, 32, 0.3],
           style: 'solid',
           outline: { // autocasts as new SimpleLineSymbol()
-            color: 'white',
+            color: '#FF1B26',
             width: 1
-
+          }
+        }
+        this.stopSymbol = {
+          type: 'simple-fill', // autocasts as new SimpleFillSymbol()
+          color: [255, 212, 40, 0.3],
+          style: 'solid',
+          outline: { // autocasts as new SimpleLineSymbol()
+            color: '#FFD428',
+            width: 1
+          }
+        }
+        this.infoSymbol = {
+          type: 'simple-marker', // autocasts as new SimpleMarkerSymbol()
+          color: [103, 0, 255],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: [255, 255, 255],
+            width: 2
           }
         }
         this.flySymbol = {
           type: 'simple-line', // autocasts as new SimpleFillSymbol()
           color: [0, 220, 255],
           width: 2
+        }
+        /* 起飞点实例 */
+        this.takeOffSymbol = {
+          type: 'picture-marker', // autocasts as new PictureMarkerSymbol()
+          url: require('../../common/img/task/takeOff.png'),
+          width: '16px',
+          height: '16px'
+        }
+        /* 返航点实例 */
+        this.turnBackSymbol = {
+          type: 'picture-marker', // autocasts as new PictureMarkerSymbol()
+          url: require('../../common/img/task/turnBack.png'),
+          width: '16px',
+          height: '16px'
         }
         // var aa = this.positions
         this.view.ui._removeComponents(['zoom'])
@@ -190,6 +239,22 @@ export default {
           } else {
             this.obstaclesList = []
           }
+          if (result.stopSprayPoint !== undefined) {
+            this.stopSprayList = JSON.parse(result.stopSprayPoint)
+            if (this.stopSprayList === undefined) {
+              this.stopSprayList = []
+            }
+          } else {
+            this.stopSprayList = []
+          }
+          if (result.infoPoint !== undefined) {
+            this.infoPointList = JSON.parse(result.infoPoint)
+            if (this.infoPointList === undefined) {
+              this.infoPointList = []
+            }
+          } else {
+            this.infoPointList = []
+          }
           if (result.recordsPoints !== undefined) {
             this.flightList = result.recordsPoints[0].realPointsList
             for (let i = 0; i < this.flightList.length; i++) {
@@ -203,7 +268,7 @@ export default {
           if (this.flightList.length > 0) {
             this.timeInterval = this.flyDuration / this.flightList.length
           } else {
-            this.timeInterval = 2000
+            this.timeInterval = 1000
           }
           // this.totalTimeIn = this.flyDuration / this.flightList.length
           this.setSymbols()
@@ -269,6 +334,7 @@ export default {
           }
         }
         /* 根据返回的地块坐标绘制地块 */
+        this.landPosition = []
         for (let i = 0; i < this.landList.length; i++) {
           let latPosition = this.landList[i].lat
           let lonPosition = this.landList[i].lon
@@ -281,11 +347,61 @@ export default {
           type: 'polygon', // autocasts as new Polyline()
           rings: this.landPosition
         }
+        let flightNum = this.$route.query.flightNum
+        let symbol = null
+        if (flightNum > 0) {
+          symbol = this.lineSymbolN
+        } else {
+          symbol = this.lineSymbol
+        }
         this.pointGraphic = new Graphic({
           geometry: polygon,
-          symbol: this.lineSymbol
+          symbol: symbol
         })
         this.landGraphics[0] = this.pointGraphic
+        /* 根据返回坐标点绘制停喷区 */
+        if (this.stopSprayList.length > 0) {
+          for (let i = 0; i < this.stopSprayList.length; i++) {
+            this.stopSprayPosition = []
+            for (let j = 0; j < this.stopSprayList[i].length; j++) {
+              let latPosition = this.stopSprayList[i][j].mLatitude
+              let lonPosition = this.stopSprayList[i][j].mLongitude
+              let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+              let realX = trans.lat
+              let realY = trans.lon
+              this.stopSprayPosition[j] = [realY, realX]
+            }
+            let stopPolygon = {
+              type: 'polygon', // autocasts as new Polyline()
+              rings: this.stopSprayPosition
+            }
+            let stopSprayGraphic = new Graphic({
+              geometry: stopPolygon,
+              symbol: this.stopSymbol
+            })
+            this.stopSprayGraphics[i] = stopSprayGraphic
+          }
+        }
+        /* 绘制辅助点 */
+        if (this.infoPointList.length > 0) {
+          for (let i = 0; i < this.infoPointList.length; i++) {
+            let latPosition = this.infoPointList[i].mLatitude
+            let lonPosition = this.infoPointList[i].mLongitude
+            let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+            let realX = trans.lat
+            let realY = trans.lon
+            let point = {
+              type: 'point',
+              longitude: realY,
+              latitude: realX
+            }
+            let infoPointGraphic = new Graphic({
+              geometry: point,
+              symbol: this.infoSymbol
+            })
+            this.infoPointGraphics[i] = infoPointGraphic
+          }
+        }
         /* 绘制圆形障碍物 */
         if (this.circleList.length > 0) {
           for (let i = 0; i < this.circleList.length; i++) {
@@ -331,30 +447,67 @@ export default {
             this.polygonGraphics[j] = pointGraphic
           }
         }
+        /* 绘制起飞点和返航点 */
+        if (this.flightList.length > 0) {
+          let latPosition = this.flightList[0].lat
+          let lonPosition = this.flightList[0].lon
+          let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+          let realX = trans.lat
+          let realY = trans.lon
+          let point = {
+            type: 'point', // autocasts as new Point()
+            longitude: realY,
+            latitude: realX
+          }
+          this.takeGraphic = new Graphic({
+            geometry: point,
+            symbol: this.takeOffSymbol
+          })
+        }
+        if (this.flightList.length > 0) {
+          let latPosition = this.flightList[this.flightList.length - 1].lat
+          let lonPosition = this.flightList[this.flightList.length - 1].lon
+          let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+          let realX = trans.lat
+          let realY = trans.lon
+          let point = {
+            type: 'point', // autocasts as new Point()
+            longitude: realY,
+            latitude: realX
+          }
+          this.turnGraphic = new Graphic({
+            geometry: point,
+            symbol: this.turnBackSymbol
+          })
+        }
+        this.view.graphics.add(this.takeGraphic)
+        this.view.graphics.add(this.turnGraphic)
         this.graphicsList = this.landGraphics.concat(this.zaGraphics)
         this.graphicsList = this.graphicsList.concat(this.polygonGraphics)
+        this.graphicsList = this.graphicsList.concat(this.stopSprayGraphics)
+        this.graphicsList = this.graphicsList.concat(this.infoPointGraphics)
+        // this.graphicsList = this.graphicsList.concat(this.taakGraList)
         this.view.graphics.addMany(this.graphicsList)
       })
     },
     /* 添加飞行轨迹 */
     setTrajectory () {
-      if (this.flyPosition > this.flightList.length) {
-        clearInterval(this.intervalMap)
-        this.intervalMap = null // 设置为null
-        clearInterval(this.timeIntervalMap)
-        this.timeIntervalMap = null
-      } else {
-        loadModules(
-          ['esri/Graphic'],
-          this.options
-        ).then(([Graphic]) => {
-          /* 绘制飞行路线 */
-          let flyBack = []
-          for (let j = 0; j < this.flyPosition; j++) {
-            flyBack[j] = this.flightList[j]
-          }
-          if (flyBack.length > 0) {
-            for (let i = 0; i < flyBack.length; i++) {
+      loadModules(
+        ['esri/Graphic'],
+        this.options
+      ).then(([Graphic]) => {
+        /* 绘制飞行路线 */
+        let flyBack = []
+        for (let j = 0; j <= this.flyPosition; j++) {
+          flyBack[j] = this.flightList[j]
+        }
+        if (flyBack.length > 0) {
+          this.flightPosition = []
+          for (let i = 0; i < flyBack.length; i++) {
+            if (flyBack[i] === undefined) {
+              clearInterval(this.intervalMap)
+              this.intervalMap = null // 设置为null
+            } else {
               let latPosition = flyBack[i].lat
               let lonPosition = flyBack[i].lon
               let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
@@ -362,25 +515,21 @@ export default {
               let realY = trans.lon
               this.flightPosition[i] = [realY, realX]
             }
-            let polyline = {
-              type: 'polyline', // autocasts as new Polyline()
-              paths: this.flightPosition
-            }
-            this.pointGraphic = new Graphic({
-              geometry: polyline,
-              symbol: this.flySymbol
-            })
-            this.polylineGraphics[0] = this.pointGraphic
           }
-          this.graphicsList = this.polylineGraphics
-          this.flyPosition++
-          this.view.graphics.addMany(this.graphicsList)
-        })
-        if (this.timeIcon !== this.flyDuration) {
-          this.timeIcon = (this.flyDuration / this.flightList.length) * (this.flyPosition + 1)
-          this.nowTime = this.formatTime(this.timeIcon)
+          let polyline = {
+            type: 'polyline', // autocasts as new Polyline()
+            paths: this.flightPosition
+          }
+          this.pointGraphic = new Graphic({
+            geometry: polyline,
+            symbol: this.flySymbol
+          })
+          this.polylineGraphics[0] = this.pointGraphic
         }
-      }
+        this.graphicsList = this.polylineGraphics
+        this.flyPosition++
+        this.view.graphics.addMany(this.graphicsList)
+      })
     },
     /* 飞行回放 */
     playBack () {
@@ -397,13 +546,17 @@ export default {
           return
         }
         this.timeIntervalMap = setInterval(() => {
-          this.timeIcon = this.timeIcon + 1000
-          this.nowTime = this.formatTime(this.timeIcon)
-          // if (this.timeIcon >= this.flyDuration) {
-          //   clearInterval(this.timeIntervalMap)
-          //   this.timeIntervalMap = null
-          // }
-        }, 1000)
+          if (this.nowTime >= this.totalTime) {
+            clearInterval(this.intervalMap)
+            this.intervalMap = null // 设置为null
+            clearInterval(this.timeIntervalMap)
+            this.timeIntervalMap = null
+            this.nowTime = this.totalTime
+          } else {
+            this.timeIcon = this.timeIcon + 1000
+            this.nowTime = this.formatTime(this.timeIcon)
+          }
+        }, this.totalTimeIn)
       } else if (this.playStatus === '1') {
         this.playStatus = '0'
         this.playIcon = require('../../common/img/task/playBtn@3x.png')
@@ -417,31 +570,46 @@ export default {
     controlSpeed () {
       clearInterval(this.intervalMap)
       this.intervalMap = null // 设置为null
+      clearInterval(this.timeIntervalMap)
+      this.timeIntervalMap = null
       if (this.playStatus === '1') {
         if (this.speedNum === 1) {
           this.speedNum = 1.5
           this.timeInterval = this.timeInterval / 1.5
-          this.totalTimeIn = this.totalTimeIn * 1.5
+          this.totalTimeIn = this.totalTimeIn / 1.5
         } else if (this.speedNum === 1.5) {
           this.speedNum = 2
           this.timeInterval = this.timeInterval / 2
-          this.totalTimeIn = this.totalTimeIn * 2
+          this.totalTimeIn = this.totalTimeIn / 2
         } else if (this.speedNum === 2) {
           this.speedNum = 2.5
           this.timeInterval = this.timeInterval / 2.5
-          this.totalTimeIn = this.totalTimeIn * 2.5
+          this.totalTimeIn = this.totalTimeIn / 2.5
         } else if (this.speedNum === 2.5) {
           this.speedNum = 3
           this.timeInterval = this.timeInterval / 3
-          this.totalTimeIn = this.totalTimeIn * 3
+          this.totalTimeIn = this.totalTimeIn / 3
         } else {
           this.speedNum = 1
+          this.totalTimeIn = 1000
           this.timeInterval = this.flyDuration / this.flightList.length
-          this.totalTimeIn = this.flyDuration / this.flightList.length
+          // this.totalTimeIn = this.flyDuration / this.flightList.length
         }
         this.intervalMap = setInterval(() => {
           this.setTrajectory()
         }, this.timeInterval)
+        this.timeIntervalMap = setInterval(() => {
+          if (this.nowTime >= this.totalTime) {
+            // clearInterval(this.intervalMap)
+            // this.intervalMap = null // 设置为null
+            clearInterval(this.timeIntervalMap)
+            this.timeIntervalMap = null
+            this.nowTime = this.totalTime
+          } else {
+            this.timeIcon = this.timeIcon + 1000
+            this.nowTime = this.formatTime(this.timeIcon)
+          }
+        }, this.totalTimeIn)
       }
     },
     /* 通过中心点和半径计算出圆形的边点集合 */

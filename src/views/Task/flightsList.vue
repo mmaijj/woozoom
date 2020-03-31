@@ -12,8 +12,8 @@
               <p v-if="item.planAcreDosage !== undefined">{{item.planAcreDosage}}<span>L/亩</span></p>
             </div>
             <div>
-              <img src="../../common/img/task/areaIcon@3x.png">
-              <p>{{item.acre}}<span>亩</span></p>
+              <img src="../../common/img/order/ridgeWidth.png">
+              <p>{{ridgeWidth}}<span>m</span></p>
             </div>
             <div>
               <img src="../../common/img/task/speedIcon@3x.png">
@@ -25,15 +25,15 @@
             </div>
           </div>
           <div class="botInfo">
-            <div>
+            <div style="width: 35%">
               <img src="../../common/img/task/bzIcon@3x.png">
               <p v-if="item.user !== undefined">{{item.user.name}}</p>
             </div>
-            <div>
+            <div style="width: 50%">
               <img src="../../common/img/task/planIcon@3x.png" style="margin-left: .2rem">
               <p>{{item.uavName}}</p>
             </div>
-            <span>{{item.durationF}}</span>
+            <span>{{item.acre}}亩</span>
           </div>
         </div>
       </div>
@@ -49,14 +49,15 @@ export default {
     return {
       taskId: '', // 任务id
       tid: '',
-      backTime: '15:40', // 返航时间
-      waterSpeed: '0', // 喷洒速度
-      totalArea: '15', // 喷洒面积
-      flySpeed: '3', // 飞行速度
-      flyHeight: '15', // 飞行高度
-      userName: '张三', // 用户姓名
-      planName: '张三的飞机', // 飞机名称
-      userTime: '05′22″', // 使用时间
+      backTime: '', // 返航时间
+      waterSpeed: '', // 喷洒速度
+      totalArea: '', // 喷洒面积
+      flySpeed: '', // 飞行速度
+      flyHeight: '', // 飞行高度
+      userName: '', // 用户姓名
+      planName: '', // 飞机名称
+      userTime: '', // 使用时间
+      ridgeWidth: '',
       onLine: navigator.onLine, // 当前网络状况
       flightList: [] // 飞行架次列表
     }
@@ -70,6 +71,7 @@ export default {
     window.addEventListener('offline', this.updateOnlineStatus)
     this.taskId = this.$route.query.taskId
     this.tid = this.$route.query.tid
+    this.ridgeWidth = localStorage.getItem('ridgeWidth')
     this.queryFlightList()
   },
   methods: {
@@ -106,11 +108,22 @@ export default {
           if (result !== null) {
             this.flightList = result
             for (let i = 0; i < this.flightList.length; i++) {
+              this.flightList[i].beginTimeStamp = this.formatTimestamp(this.flightList[i].startTime)
               this.flightList[i].startTime = this.formatMin(this.flightList[i].startTime)
               this.flightList[i].endTime = this.formatMin(this.flightList[i].endTime)
               this.flightList[i].durationF = this.formatTime(this.flightList[i].duration)
               this.flightList[i].durationA = this.flightList[i].duration
             }
+            for (let j = 0; j < this.flightList.length - 1; j++) {
+              for (let k = 0; k < this.flightList.length - j - 1; k++) {
+                if (this.flightList[k].beginTimeStamp > this.flightList[k + 1].beginTimeStamp) {
+                  let swap = this.flightList[k]
+                  this.flightList[k] = this.flightList[k + 1]
+                  this.flightList[k + 1] = swap
+                }
+              }
+            }
+            console.log(this.flightList)
           } else {
             this.flightList = []
           }
@@ -135,8 +148,9 @@ export default {
     },
     goPlayBack (item) {
       let recordId = item.id
+      let flightNum = this.$route.query.flightNum
       localStorage.setItem('flyDuration', item.durationA)
-      this.$router.push({ path: '/playBack', query: { 'tid': this.tid, 'recordId': recordId } })
+      this.$router.push({ path: '/playBack', query: { 'tid': this.tid, 'recordId': recordId, 'flightNum': flightNum } })
     }
   }
 }

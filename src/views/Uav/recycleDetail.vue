@@ -101,11 +101,12 @@ export default {
       let _self = this
       const clipboard = new Clipboard('.copyBtn')
       clipboard.on('success', function (e) {
-        _self.$createDialog({
-          type: 'alert',
-          content: '复制成功！',
-          icon: 'cubeic-alert'
-        }).show()
+        _self.toast = _self.toast || _self.$createToast({
+          txt: '复制成功',
+          type: 'txt',
+          time: 2000
+        })
+        _self.toast.show()
       })
       clipboard.on('error', function (e) {
       })

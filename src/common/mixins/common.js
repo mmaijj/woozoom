@@ -79,6 +79,12 @@ export default {
       let ss = (newDate.getSeconds() < 10 ? '0' + newDate.getSeconds() : newDate.getSeconds())
       return YY + MM + DD + ' ' + hh + mm + ss
     },
+    /* 日期格式转时间戳 */
+    formatTimestamp (item) {
+      let date = new Date(item)
+      let time1 = date.getTime()
+      return time1
+    },
     formatDay (date) {
       let newDate = new Date(date)
       let DD = (newDate.getDate())

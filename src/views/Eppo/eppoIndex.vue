@@ -46,6 +46,7 @@ export default {
     window.addEventListener('offline', this.updateOnlineStatus)
     this.userId = localStorage.getItem('userId')
     let _url = this.getSignUrl()
+    console.log('当前路径' + _url)
     let appid = 'wx97b55a9b21ad3b5f'
     let srcret = '25726f24d45a8213dfd08bab5b7fa186'
     let getIdParams = new URLSearchParams()
@@ -188,6 +189,7 @@ export default {
           let ss = result.split(',')
           let flag = ss[0]
           let id = ss[1] // 植保队id或者订单id
+          console.log('开启扫码啦啦啦')
           // 1：加入植保队 2：分享订单
           if (flag === '1') {
             let inviteParam = new URLSearchParams()

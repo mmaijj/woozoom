@@ -37,7 +37,7 @@
             </div>
             <div class="creatTime">
               <label class="cubeic-calendar"></label>
-              <span>{{item.updateDate}}</span>
+              <span>{{item.taskId}}</span>
             </div>
             <div class="beTeam">
               <img src="../../common/img/task/beTeam.png">
@@ -66,8 +66,10 @@
 </template>
 
 <script>
+import countDown from 'common/mixins/common'
 export default {
   name: 'task',
+  mixins: [countDown],
   data () {
     return {
       searchText: '搜索订单',
@@ -105,7 +107,13 @@ export default {
   mounted () {
     let mychoose = localStorage.getItem('myChoose')
     if (mychoose !== null) {
-      this.myCreate = mychoose
+      if (mychoose === 'myCreate') {
+        this.isMeFlag = 0
+        this.myCreate = 'myCreate'
+      } else if (mychoose === 'myCreateActive') {
+        this.isMeFlag = 1
+        this.myCreate = 'myCreateActive'
+      }
     } else {
       this.myCreate = 'myCreate'
     }
@@ -134,6 +142,7 @@ export default {
         localStorage.setItem('myChoose', this.myCreate)
         this.searchTask()
       } else {
+        this.pageNo = 1
         this.myCreate = 'myCreate'
         this.isMeFlag = 0
         localStorage.setItem('myChoose', this.myCreate)
@@ -183,8 +192,10 @@ export default {
               if (this.taskList[i].acre !== undefined) {
                 this.taskList[i].acre = Math.round(this.taskList[i].acre * 1000) / 1000
               }
-              if (this.taskList[i].updateDate !== undefined) {
-                this.taskList[i].updateDate = this.taskList[i].updateDate.substring(0, 10)
+              if (this.taskList[i].taskId !== undefined) {
+                if (this.taskList[i].taskId.length > 10) {
+                  this.taskList[i].taskId = this.formatDate(Number(this.taskList[i].taskId)).substring(0, 10)
+                }
               }
             }
           } else {
@@ -199,12 +210,6 @@ export default {
               localStorage.removeItem('userToken')
               this.$router.push({ path: '/UserLogin', query: { 'flag': '1' } })
             }
-          }).show()
-        } else {
-          this.$createDialog({
-            type: 'alert',
-            content: reasonPhrase,
-            icon: 'cubeic-alert'
           }).show()
         }
       })

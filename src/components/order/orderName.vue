@@ -64,11 +64,19 @@ export default {
       }
     },
     hide () {
-      let param = {}
-      param.id = this.orderId
-      param.name = this.orderName
-      this.$emit(EVENT_LEAVE, param)
-      this.visible = false
+      if (this.orderName.length > 15) {
+        this.$createDialog({
+          type: 'alert',
+          content: '订单名称不得超过15位',
+          icon: 'cubeic-alert'
+        }).show()
+      } else {
+        let param = {}
+        param.id = this.orderId
+        param.name = this.orderName
+        this.$emit(EVENT_LEAVE, param)
+        this.visible = false
+      }
     }
   }
 }

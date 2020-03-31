@@ -64,6 +64,7 @@ export default {
       let isCard = this.isRightId(this.cardnumber)
       if (isCard) {
         this.$emit(EVENT_LEAVE, this.cardnumber)
+        this.cardnumber = ''
         this.visible = false
       } else {
         this.errtoast = this.errtoast || this.$createToast({

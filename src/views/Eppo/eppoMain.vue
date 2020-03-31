@@ -171,12 +171,14 @@ export default {
       this.isShowMore = false
     },
     hideIcon () {
+      this.teamNums = []
       this.hideButton()
       this.getTeamlist()
       this.getEppoDetail()
     },
     /* 获取团队成员列表 */
     getTeamlist () {
+      this.memberCount = 0
       this.request({
         url: '/crops-platform/api/protection_v3/captain/flyerList',
         method: 'get',
@@ -202,6 +204,7 @@ export default {
               break
             }
           }
+          console.log(this.memberCount)
           this.teamNums.unshift(ss)
         }
       })
@@ -217,6 +220,7 @@ export default {
         },
         $events: {
           leave: () => {
+            this.teamNums = []
             this.getTeamlist()
             this.getEppoDetail()
           }

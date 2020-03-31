@@ -77,6 +77,9 @@ export default {
     } else {
       this.activePanel = '管理' // 初始化显示管理页面
     }
+    let clientHeight = document.documentElement.clientHeight
+    console.log(clientHeight)
+    localStorage.setItem('clientH', clientHeight)
     window.addEventListener('online', this.updateOnlineStatus)
     window.addEventListener('offline', this.updateOnlineStatus)
     // this.getOpenId()
@@ -147,6 +150,47 @@ export default {
           localStorage.setItem('userLogo', this.userLogo) // 用户头像
           localStorage.setItem('quaCount', response.data.data.qualificationsCount) // 用户头像
           localStorage.setItem('teamId', response.data.data.office.id)
+        }
+        console.log('用户的权限' + this.userqx)
+        let flag = localStorage.getItem('userQx')
+        if (flag === '0') {
+          this.$createDialog({
+            type: 'confirm',
+            content: '此用户没有植保队！',
+            icon: 'cubeic-alert',
+            confirmBtn: {
+              text: '去加入',
+              active: true,
+              disabled: false
+            },
+            cancelBtn: {
+              text: '退出登录',
+              active: false,
+              disabled: false
+            },
+            onConfirm: () => {
+              this.$router.push('/EppoIndex')
+            },
+            onCancel: () => {
+              this.request({
+                url: '/crops-platform/a/logout',
+                method: 'get',
+                headers: {
+                  'clientType': 'weixin',
+                  'deviceId': '1165465'
+                }
+              }).then(response => {
+                let res = response.data.status
+                // eslint-disable-next-line no-unused-vars
+                let { code, reasonPhrase } = res
+                if (code === 0) {
+                  localStorage.removeItem('userToken')
+                  localStorage.removeItem('myChoose')
+                  this.$router.push({ path: '/UserLogin', query: { 'flag': '1' } })
+                }
+              })
+            }
+          }).show()
         }
       })
     },

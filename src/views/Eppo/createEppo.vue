@@ -42,7 +42,6 @@ export default {
       this.$emit('changeBlur')
     },
     hidePage (val) {
-      debugger
       let eppoName = ''
       if (val === 1) {
         if (this.eppoName !== '') {

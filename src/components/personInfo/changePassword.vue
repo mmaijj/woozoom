@@ -72,6 +72,7 @@ export default {
     /* 判断旧密码是否正确 */
     nextStep () {
       let oldPass = localStorage.getItem('userPassword')
+      console.log('用户旧密码' + oldPass)
       if (oldPass !== this.oldPassword) {
         this.$createDialog({
           type: 'alert',
@@ -83,12 +84,12 @@ export default {
       }
     },
     hide () {
+      localStorage.setItem('userPassword', this.password) // 记录用户密码
       this.$emit(EVENT_LEAVE, this.password)
       this.visible = false
       this.isOld = true
       this.password = ''
       this.oldPassword = ''
-      localStorage.setItem('userPassword', this.password) // 记录用户密码
     }
   }
 }

@@ -92,7 +92,7 @@ export default {
       isOrder: true,
       positions: [],
       pageNo: 1, // 当前页数
-      pageSize: 10, // 每页个数
+      pageSize: 50, // 每页个数
       isLast: 0, // 是否最后一页0：不是 1：是
       taskList: [],
       orderName: '', // 订单名称
@@ -103,18 +103,25 @@ export default {
       obstaclesList: [], // 障碍物集合
       circleList: [], // 圆形障碍物
       polygonList: [], // 多边形障碍物
+      stopSprayList: [], // 停喷区
+      infoPointList: [], // 辅助点
       landLons: [], // 地块坐标
       landPosition: [], // 地块转化坐标
       polygonPosition: [], // 多边形障碍物转化坐标
+      stopSprayPosition: [], // 停喷区坐标转化
+      infoPointPosition: [], // 辅助点坐标转化
       setExt: '0', // 是否设置了地图显示范围 0:没有 1:有
       landGraphics: [], // 地块实例list
       zaGraphics: [], // 圆形障碍实例list
       polygonGraphics: [], // 多边形障碍物实例
+      stopSprayGraphics: [], // 停喷区实例list
+      infoPointGraphics: [], // 辅助点实例list
       lineSymbol: {}, // 在线飞机实例
       flightNum: '', // 飞行架次
       lineSymbol1: {}, // 在线飞机实例
       landLats: [], // 地块坐标
       dealTask: [], // 已关联的任务
+      graphicsList: [],
       options: {
         pullDownRefresh: {
           threshold: 60,
@@ -130,6 +137,7 @@ export default {
       isShowSearch: false,
       userId: '', // 用户id
       taskName: '', // 任务名称
+      allLand: [],
       onLine: navigator.onLine, // 当前网络状况
       createId: '', // 订单创建者id
       teamId: '' // 植保队id
@@ -186,29 +194,57 @@ export default {
         })
         this.lineSymbol = {
           type: 'simple-fill', // autocasts as SimpleLineSymbol()
-          color: [67, 136, 255, 0.5],
+          color: [0, 0, 0, 0.3],
           outline: {
             // autocasts as new SimpleLineSymbol()
-            color: [255, 255, 255],
+            color: '#FFFFFF',
+            width: 1
+          }
+        }
+        this.lineSymbolN = {
+          type: 'simple-fill', // autocasts as SimpleLineSymbol()
+          color: [0, 216, 25, 0.3],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: '#00D819',
             width: 1
           }
         }
         this.lineSymbol1 = {
           type: 'simple-fill', // autocasts as new SimpleFillSymbol()
-          color: [51, 51, 204, 0.9],
+          color: [255, 27, 32, 0.3],
           style: 'solid',
           outline: { // autocasts as new SimpleLineSymbol()
-            color: 'white',
+            color: '#FF1B26',
             width: 1
-
+          }
+        }
+        this.stopSymbol = {
+          type: 'simple-fill', // autocasts as new SimpleFillSymbol()
+          color: [255, 212, 40, 0.3],
+          style: 'solid',
+          outline: { // autocasts as new SimpleLineSymbol()
+            color: '#FFD428',
+            width: 1
+          }
+        }
+        this.infoSymbol = {
+          type: 'simple-marker', // autocasts as new SimpleMarkerSymbol()
+          color: [103, 0, 255],
+          outline: {
+            // autocasts as new SimpleLineSymbol()
+            color: [255, 255, 255],
+            width: 2
           }
         }
         // var aa = this.positions
+        this.view.graphics.removeMany(this.graphicsList)
         this.view.ui._removeComponents(['zoom'])
         this.view.ui.remove('attribution')
         this.view.popup = null
         this.view.when(function () {
           for (let i = 0; i < self.dealTask.length; i++) {
+            self.queryFlyDetailN(self.dealTask[i], i)
             self.queryFlyDetail(self.dealTask[i])
           }
           // self.queryFlyDetail()
@@ -361,11 +397,8 @@ export default {
           let result = response.data.data
           if (result.boundaryPoints !== undefined) {
             this.landList = result.boundaryPoints
-            for (let i = 0; i < this.landList.length; i++) {
-              let trans = this.gcj_encrypt(this.landList[i].lat, this.landList[i].lon) // 将坐标转码
-              this.landLats[i] = trans.lat
-              this.landLons[i] = trans.lon
-            }
+          } else {
+            this.landList = []
           }
           if (result.obstaclePoints2 !== undefined) {
             this.obstaclesList = result.obstaclePoints2
@@ -378,6 +411,22 @@ export default {
               }
             }
           }
+          if (result.stopSprayPoint !== undefined) {
+            this.stopSprayList = JSON.parse(result.stopSprayPoint)
+            if (this.stopSprayList === undefined) {
+              this.stopSprayList = []
+            }
+          } else {
+            this.stopSprayList = []
+          }
+          if (result.infoPoint !== undefined && result.infoPoint !== '[]') {
+            this.infoPointList = JSON.parse(result.infoPoint)
+            if (this.infoPointList === undefined) {
+              this.infoPointList = []
+            }
+          } else {
+            this.infoPointList = []
+          }
           this.setSymbols()
         } else {
           this.$createDialog({
@@ -388,14 +437,62 @@ export default {
         }
       })
     },
-    /* 添加地图实例 */
-    setSymbols () {
-      // this.view.graphics.removeMany(this.graphicsList)
+    /* 飞行详情 */
+    queryFlyDetailN (item, long) {
+      let tid = item.id
+      let flyParams = new URLSearchParams()
+      flyParams.set('tId', tid)
+      flyParams.set('recordId', '')
+      this.request({
+        url: '/crops-platform/api/task_v3/track',
+        method: 'get',
+        params: flyParams,
+        headers: {
+          'clientType': 'weixin',
+          'deviceId': '11654325'
+        }
+      }).then(response => {
+        let res = response.data.status
+        // eslint-disable-next-line no-unused-vars
+        let { code, reasonPhrase } = res
+        if (code === 0) {
+          let result = response.data.data
+          let ss = []
+          if (result.boundaryPoints !== undefined) {
+            ss = result.boundaryPoints
+          }
+          if (this.allLand.length !== 0) {
+            this.allLand = this.allLand.concat(ss)
+          } else {
+            this.allLand = ss
+          }
+          if (long === this.dealTask.length - 1) {
+            this.setMapExt(this.allLand)
+          }
+        } else {
+          this.$createDialog({
+            type: 'alert',
+            content: reasonPhrase,
+            icon: 'cubeic-alert'
+          }).show()
+        }
+      })
+    },
+    /* 添加地图范围 */
+    setMapExt (item) {
       loadModules(
-        ['esri/Graphic', 'esri/geometry/SpatialReference', 'esri/geometry/Extent', 'esri/geometry/Point', 'esri/geometry/Circle', 'esri/geometry/support/webMercatorUtils'],
+        ['esri/Graphic', 'esri/geometry/SpatialReference', 'esri/geometry/Extent'],
         this.options
-      ).then(([Graphic, SpatialReference, Extent, Point, Circle, webMercatorUtils]) => {
-        if (this.landList.length > 0) {
+      ).then(([Graphic, SpatialReference, Extent]) => {
+        // for (let i = 0; i < this.dealTask.length; i++) {
+        //   this.queryFlyDetailN(this.dealTask[i], i)
+        // }
+        if (item.length !== 0) {
+          for (let i = 0; i < item.length; i++) {
+            let trans = this.gcj_encrypt(item[i].lat, this.allLand[i].lon) // 将坐标转码
+            this.landLats[i] = trans.lat
+            this.landLons[i] = trans.lon
+          }
           /* 根据返回的地块坐标点，规划地图显示范围 */
           let maxX = ''
           // 遍历数组，默认arr中的某一个元素为最大值，进行逐一比较
@@ -438,29 +535,91 @@ export default {
             })
             this.view.extent = this.ext
             this.setExt = '1'
-          } else {
-            // this.setExt = '1'
           }
-          /* 根据返回的地块坐标绘制地块 */
-          for (let i = 0; i < this.landList.length; i++) {
-            let latPosition = this.landList[i].lat
-            let lonPosition = this.landList[i].lon
+        }
+      })
+    },
+    /* 添加地图实例 */
+    setSymbols () {
+      // this.view.graphics.removeMany(this.graphicsList)
+      loadModules(
+        ['esri/Graphic', 'esri/geometry/SpatialReference', 'esri/geometry/Extent', 'esri/geometry/Point', 'esri/geometry/Circle', 'esri/geometry/support/webMercatorUtils'],
+        this.options
+      ).then(([Graphic, SpatialReference, Extent, Point, Circle, webMercatorUtils]) => {
+        /* 根据返回的地块坐标绘制地块 */
+        this.landPosition = []
+        for (let i = 0; i < this.landList.length; i++) {
+          let latPosition = this.landList[i].lat
+          let lonPosition = this.landList[i].lon
+          let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+          let realX = trans.lat
+          let realY = trans.lon
+          this.landPosition[i] = [realY, realX]
+        }
+        let polygon = {
+          type: 'polygon', // autocasts as new Polyline()
+          rings: this.landPosition
+        }
+        let flyerCount = this.$route.query.flyerCount
+        let symbol = null
+        if (flyerCount > 0) {
+          symbol = this.lineSymbolN
+        } else {
+          symbol = this.lineSymbol
+        }
+        this.pointGraphic = new Graphic({
+          geometry: polygon,
+          symbol: symbol
+        })
+        this.landGraphics[0] = this.pointGraphic
+        /* 根据返回坐标点绘制停喷区 */
+        this.stopSprayGraphics = []
+        if (this.stopSprayList.length > 0) {
+          for (let i = 0; i < this.stopSprayList.length; i++) {
+            this.stopSprayPosition = []
+            for (let j = 0; j < this.stopSprayList[i].length; j++) {
+              let latPosition = this.stopSprayList[i][j].mLatitude
+              let lonPosition = this.stopSprayList[i][j].mLongitude
+              let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
+              let realX = trans.lat
+              let realY = trans.lon
+              this.stopSprayPosition[j] = [realY, realX]
+            }
+            let stopPolygon = {
+              type: 'polygon', // autocasts as new Polyline()
+              rings: this.stopSprayPosition
+            }
+            let stopSprayGraphic = new Graphic({
+              geometry: stopPolygon,
+              symbol: this.stopSymbol
+            })
+            this.stopSprayGraphics[i] = stopSprayGraphic
+          }
+        }
+        /* 绘制辅助点 */
+        this.infoPointGraphics = []
+        if (this.infoPointList.length > 0) {
+          for (let i = 0; i < this.infoPointList.length; i++) {
+            let latPosition = this.infoPointList[i].mLatitude
+            let lonPosition = this.infoPointList[i].mLongitude
             let trans = this.gcj_encrypt(latPosition, lonPosition) // 将坐标转码
             let realX = trans.lat
             let realY = trans.lon
-            this.landPosition[i] = [realY, realX]
+            let point = {
+              type: 'point',
+              longitude: realY,
+              latitude: realX
+            }
+            let infoPointGraphic = new Graphic({
+              geometry: point,
+              symbol: this.infoSymbol
+            })
+            this.infoPointGraphics[i] = infoPointGraphic
           }
-          let polygon = {
-            type: 'polygon', // autocasts as new Polyline()
-            rings: this.landPosition
-          }
-          this.pointGraphic = new Graphic({
-            geometry: polygon,
-            symbol: this.lineSymbol
-          })
-          this.landGraphics[0] = this.pointGraphic
+          this.infoPointList = []
         }
         /* 绘制圆形障碍物 */
+        this.zaGraphics = []
         if (this.circleList.length > 0) {
           for (let i = 0; i < this.circleList.length; i++) {
             let lat = this.circleList[i][0].lat
@@ -482,10 +641,12 @@ export default {
               symbol: this.lineSymbol1
             })
           }
+          this.circleList = []
         }
         /* 绘制多边形障碍物 */
         if (this.polygonList.length > 0) {
           for (let j = 0; j < this.polygonList.length; j++) {
+            this.polygonPosition = []
             for (let k = 0; k < this.polygonList[j].length; k++) {
               let latPosition = this.polygonList[j][k].lat
               let lonPosition = this.polygonList[j][k].lon
@@ -504,9 +665,12 @@ export default {
             })
             this.polygonGraphics[j] = pointGraphic
           }
+          this.polygonList = []
         }
         this.graphicsList = this.landGraphics.concat(this.zaGraphics)
         this.graphicsList = this.graphicsList.concat(this.polygonGraphics)
+        this.graphicsList = this.graphicsList.concat(this.stopSprayGraphics)
+        this.graphicsList = this.graphicsList.concat(this.infoPointGraphics)
         this.view.graphics.addMany(this.graphicsList)
       })
     },
@@ -569,6 +733,7 @@ export default {
       background-color $color-background-grey
       border-radius 10px 10px 0 0
       width 100%
+      height initial
       position absolute
       bottom 0
       .hideDetail

@@ -33,7 +33,7 @@
 <!--      </div>-->
       <div class="verCenter" @click="lookQualification">
         <label>飞行资质</label>
-        <p>{{quaCount}}个证件</p>
+<!--        <p>{{quaCount}}个证件</p>-->
         <span class="more-info"></span>
       </div>
       <div class="verCenter" @click="setPassword">

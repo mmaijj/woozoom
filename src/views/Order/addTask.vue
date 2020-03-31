@@ -49,7 +49,7 @@
                 </div>
               </div>
             </div>
-            <div :class="[item.check === false?'noChoose':'chooseTask']" @click="chooseTask(index)"></div>
+            <div :class="[item.check === false || item.check === undefined?'noChoose':'chooseTask']" @click="chooseTask(index)"></div>
           </div>
         </cube-scroll>
       </div>
@@ -150,6 +150,7 @@ export default {
           checkNum++
         }
       }
+      console.log(this.taskList)
       this.checkedTask = checkNum
       this.$forceUpdate()
     },
@@ -189,7 +190,9 @@ export default {
             this.taskList.push.apply(this.taskList, result.list)
             if (this.taskList.length > 0) {
               for (let i = 0; i < this.taskList.length; i++) {
-                this.taskList[i].check = false
+                if (this.taskList[i].check !== true) {
+                  this.taskList[i].check = false
+                }
                 if (this.taskList[i].percent !== undefined && this.taskList[i].percent !== '0') {
                   if (this.taskList[i].percent.indexOf('.') !== -1) {
                     this.taskList[i].percent = this.taskList[i].percent.substring(0, this.taskList[i].percent.indexOf('.'))

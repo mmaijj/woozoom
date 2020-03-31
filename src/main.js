@@ -6,11 +6,11 @@ import router from './router'
 import store from './store'
 // import 'common/mixins/getCode'
 import Request from './common/mixins/request'
-import eruda from 'eruda'
+// import eruda from 'eruda'
 import 'common/stylus/index.styl'
 import myCharts from './common/mixins/myCharts.js'
 Vue.use(myCharts)
-eruda.init()
+// eruda.init()
 Vue.config.productionTip = false
 Vue.prototype.request = Request
 router.beforeEach((to, from, next) => {
